@@ -144,6 +144,7 @@
 		<module>registration_3d</module>
 		<module>wavelets</module>
 		<module>weave_jy2java</module>
+	 <module>IFI_Flow</module>
 	</modules>
 
 	<build>
