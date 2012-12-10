@@ -4,14 +4,18 @@ import ij.*;
 import ij.process.*;
 import ij.plugin.*;
 import java.awt.*;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class IFI_Flow implements PlugIn {
+public class IFI_Flow implements PlugIn, MouseWheelListener {
 
     public void run(String arg) {
         //IJ.run("Stack to RGB");
-        IJ.run("Rename...","title=Working");
+        IJ.run("Rename...", "title=Working");
+        IJ.setTool("arrow");
         new WaitForUserDialog("Action Required", "Use the arrowtool to set direction towards right ventricle.").show();
         // Find all images that have a LineRoi in them
         int[] ids = WindowManager.getIDList();
@@ -42,18 +46,23 @@ public class IFI_Flow implements PlugIn {
         for (Iterator it = all.iterator(); it.hasNext();) {
             titles[k++] = ((ImagePlus) it.next()).getTitle();
         }
-
+    ImagePlus source  ;
+        if (all.size() > 1) {
         GenericDialog gd = new GenericDialog("Align Image");
         String current = WindowManager.getCurrentImage().getTitle();
         gd.addChoice("source", titles, titles[0]);
-        gd.showDialog();
+            gd.showDialog();
         if (gd.wasCanceled()) {
             return;
         }
+        source = WindowManager.getImage(ids[gd.getNextChoiceIndex()]);
+        } else {
+            source = WindowManager.getCurrentImage();
+        }
 
-        ImagePlus source = WindowManager.getImage(ids[gd.getNextChoiceIndex()]);
+
         Arrow sr = (Arrow) source.getRoi();
-        AngleLine line1 = new AngleLine(sr.x1,sr.y1,sr.x2,sr.y2);
+        AngleLine line1 = new AngleLine(sr.x1, sr.y1, sr.x2, sr.y2);
         source.unlock();
         IJ.run("Select All");
         IJ.run("Rotate...", "angle=" + Math.toDegrees(line1.angle));
@@ -61,16 +70,25 @@ public class IFI_Flow implements PlugIn {
         Rectangle r = roi.getBounds();
         int x_ = r.width > source.getWidth() ? r.width : source.getWidth();
         int y_ = r.height > source.getHeight() ? r.height : source.getHeight();
-        
-	IJ.run("Colors...", "foreground=white background=white selection=yellow");
+
+        IJ.run("Colors...", "foreground=white background=white selection=yellow");
         IJ.run("Canvas Size...", "width=" + x_ + " height=" + y_ + " position=Center zero");
 
 
         ImageProcessor result = source.getProcessor();
         result.rotate(Math.toDegrees(line1.angle));
         source.draw();
-        Versatile_IFIWand wand = new Versatile_IFIWand();
-        wand.doWand(source, line1.x2, line1.y2);
+        IJ.setTool("point");
+        new WaitForUserDialog("Action Required", "Use point tool to target slice area.").show();
+        PointRoi p = (PointRoi) source.getRoi();
+        IJ.run("Colors...", "foreground=black background=black selection=yellow");
+        new Versatile_Wand().doWand(source, p.getPolygon().xpoints[0], p.getPolygon().ypoints[0]);
+        IJ.run("Colors...", "foreground=white background=white selection=yellow");
+        IJ.run("Crop");
+        IJ.setTool("brush");
+        IJ.register(IFI_Flow.class);
+        source.getWindow().getCanvas().addMouseWheelListener(this);
+
     }
 
     public static ImageProcessor align(ImageProcessor source, AngleLine line1) {
@@ -80,6 +98,26 @@ public class IFI_Flow implements PlugIn {
         return result;
     }
 
+    public void mouseClicked(MouseEvent e) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void mousePressed(MouseEvent e) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void mouseReleased(MouseEvent e) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void mouseEntered(MouseEvent e) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void mouseExited(MouseEvent e) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     protected static class AngleLine extends ij.gui.Line {
 
         public double angle = 0;
@@ -87,8 +125,58 @@ public class IFI_Flow implements PlugIn {
         public AngleLine(int ox1, int oy1, int ox2, int oy2) {
             super(ox1, oy1, ox2, oy2);
             angle = Math.atan2((float) (oy1 - oy2), (float) (ox2 - ox1)) - Math.PI / 2;
-            IJ.showMessage("" + Math.toDegrees(angle));
         }
     }
 
+    /**
+     * Hacks on the ij.gui.Toolbar to get the proper value, and defaults to 15
+     * if the value is absurd.
+     */
+    static public int getBrushSize() {
+//        int brushSize = 15;
+//        try {
+//            java.lang.reflect.Field f = Toolbar.class.getDeclaredField("brushSize");
+//            f.setAccessible(true);
+//            brushSize = ((Integer) f.get(Toolbar.getInstance())).intValue();
+//            if (brushSize < 1) {
+//                brushSize = 15;
+//            }
+//        } catch (Exception e) {
+//        }
+//        return brushSize;
+        return Toolbar.getBrushSize();
+    }
+
+    /**
+     * Change the brush size by the given length increment (in pixel units). A
+     * lower limit of 1 pixel is preserved. Returns the value finally accepted
+     * for brush size.
+     */
+    static public int setBrushSize(int inc) {
+        int brushSize = Toolbar.getBrushSize() + inc;
+        try {
+            if (brushSize > 250) {
+                brushSize = 250;
+            } else if (brushSize < 5) {
+                brushSize = 5;
+            }
+            Toolbar.setBrushSize(brushSize);
+        } catch (Exception e) {
+        }
+        return brushSize;
+    }
+
+    public void mouseWheelMoved(MouseWheelEvent e) {
+        final int rotation = e.getWheelRotation();
+        final int sign = rotation > 0 ? 1 : -1;
+        int brushSize_old = getBrushSize();
+        // resize brush for AreaList/AreaTree painting
+        int brushSize = setBrushSize((int) (5 * sign)); // the getWheelRotation provides the sign
+        int extra = (int) (10);
+        if (extra < 2) {
+            extra = 2;
+        }
+        extra += 4; // for good measure
+        IJ.getImage().draw();
+    }
 }

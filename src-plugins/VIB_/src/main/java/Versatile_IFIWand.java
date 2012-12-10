@@ -1,4 +1,5 @@
 
+
 import ij.*;
 import ij.process.*;
 import ij.gui.Roi;
@@ -82,8 +83,8 @@ import java.util.Set;
  * tool:
  *
  * macro 'Versatile Wand Tool-Cf00Lee55O2233' { getCursorLoc(x, y, z, flags);
- * call('Versatile_IFIWand.mousePressed', x, y); } macro 'Versatile Wand Tool
- * Options' { call('Versatile_IFIWand.setOptions'); }
+ * call('IFI.Versatile_IFIWand.mousePressed', x, y); } macro 'Versatile Wand Tool
+ * Options' { call('IFI.Versatile_IFIWand.setOptions'); }
  *
  * Left-click the tool icon for selecting the tool Right-click or double-click
  * the tool icon for the options menu where the tolerance and other parameters
