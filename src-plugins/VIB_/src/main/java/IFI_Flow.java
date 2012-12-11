@@ -46,16 +46,16 @@ public class IFI_Flow implements PlugIn, MouseWheelListener {
         for (Iterator it = all.iterator(); it.hasNext();) {
             titles[k++] = ((ImagePlus) it.next()).getTitle();
         }
-    ImagePlus source  ;
+        ImagePlus source;
         if (all.size() > 1) {
-        GenericDialog gd = new GenericDialog("Align Image");
-        String current = WindowManager.getCurrentImage().getTitle();
-        gd.addChoice("source", titles, titles[0]);
+            GenericDialog gd = new GenericDialog("Align Image");
+            String current = WindowManager.getCurrentImage().getTitle();
+            gd.addChoice("source", titles, titles[0]);
             gd.showDialog();
-        if (gd.wasCanceled()) {
-            return;
-        }
-        source = WindowManager.getImage(ids[gd.getNextChoiceIndex()]);
+            if (gd.wasCanceled()) {
+                return;
+            }
+            source = WindowManager.getImage(ids[gd.getNextChoiceIndex()]);
         } else {
             source = WindowManager.getCurrentImage();
         }
@@ -133,18 +133,17 @@ public class IFI_Flow implements PlugIn, MouseWheelListener {
      * if the value is absurd.
      */
     static public int getBrushSize() {
-//        int brushSize = 15;
-//        try {
-//            java.lang.reflect.Field f = Toolbar.class.getDeclaredField("brushSize");
-//            f.setAccessible(true);
-//            brushSize = ((Integer) f.get(Toolbar.getInstance())).intValue();
-//            if (brushSize < 1) {
-//                brushSize = 15;
-//            }
-//        } catch (Exception e) {
-//        }
-//        return brushSize;
-        return Toolbar.getBrushSize();
+        int brushSize = 15;
+        try {
+            java.lang.reflect.Field f = Toolbar.class.getDeclaredField("brushSize");
+            f.setAccessible(true);
+            brushSize = ((Integer) f.get(Toolbar.getInstance())).intValue();
+            if (brushSize < 1) {
+                brushSize = 15;
+            }
+        } catch (Exception e) {
+        }
+        return brushSize;
     }
 
     /**
@@ -153,14 +152,17 @@ public class IFI_Flow implements PlugIn, MouseWheelListener {
      * for brush size.
      */
     static public int setBrushSize(int inc) {
-        int brushSize = Toolbar.getBrushSize() + inc;
+        int brushSize = 15;
         try {
-            if (brushSize > 250) {
-                brushSize = 250;
-            } else if (brushSize < 5) {
-                brushSize = 5;
+            java.lang.reflect.Field f = Toolbar.class.getDeclaredField("brushSize");
+            f.setAccessible(true);
+            brushSize = ((Integer) f.get(Toolbar.getInstance())).intValue();
+            if (brushSize + inc < 1) {
+                brushSize = 1;
+            } else {
+                brushSize += inc;
             }
-            Toolbar.setBrushSize(brushSize);
+            f.setInt(Toolbar.getInstance(), brushSize);
         } catch (Exception e) {
         }
         return brushSize;
@@ -169,9 +171,10 @@ public class IFI_Flow implements PlugIn, MouseWheelListener {
     public void mouseWheelMoved(MouseWheelEvent e) {
         final int rotation = e.getWheelRotation();
         final int sign = rotation > 0 ? 1 : -1;
-        int brushSize_old = getBrushSize();
         // resize brush for AreaList/AreaTree painting
-        int brushSize = setBrushSize((int) (5 * sign)); // the getWheelRotation provides the sign
+        synchronized (this) {
+            setBrushSize((int) (10 * sign * rotation));
+        } // the getWheelRotation provides the sign
         int extra = (int) (10);
         if (extra < 2) {
             extra = 2;
