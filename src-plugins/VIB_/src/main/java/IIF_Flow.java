@@ -36,7 +36,6 @@ public class IIF_Flow implements PlugIn, MouseWheelListener {
     String jpgSaveFormat = outDir + "/jpg/%04d.jpg";
     String dataSaveFormat = outDir + "/data/%04d.dat";
     String inFormat = "/Done/seq%04d.jp2";
-    
     int imgID;
     String seriesID;
     String filename;
@@ -53,7 +52,7 @@ public class IIF_Flow implements PlugIn, MouseWheelListener {
             roiSaveFormat = LinRoot + roiSaveFormat;
             jpgSaveFormat = LinRoot + jpgSaveFormat;
             dataSaveFormat = LinRoot + dataSaveFormat;
-            inFormat = LinRoot + inFormat;            
+            inFormat = LinRoot + inFormat;
         }
         imgID = Integer.parseInt(arg.split("\\|")[0]);
         seriesID = arg.split("\\|")[1];
@@ -371,6 +370,27 @@ public class IIF_Flow implements PlugIn, MouseWheelListener {
         ;
 
         public void actionPerformed(ActionEvent e) {
+
+            rm.runCommand("Update");
+            
+            IJ.run(source, "Select None", "");
+
+            if (rm.getCount() >= 2) {
+                rm.select(IN);
+                rm.setSelectedIndexes(VIN_IN);
+                rm.runCommand("AND");
+                rm.runCommand("Update");
+            }
+
+            if (rm.getCount() == 3) {
+                rm.select(N);
+                rm.setSelectedIndexes(VIN_IN_N);
+                rm.runCommand("AND");
+                rm.runCommand("Update");
+            }
+            
+            IJ.run(source, "Select None", "");
+
             try {
                 if (rm.getCount() > 0) {
                     rm.select(VIN);
